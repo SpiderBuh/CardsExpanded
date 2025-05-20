@@ -35,7 +35,7 @@ namespace CardsExpanded.Commands
             }
 
             response = "Stuff:\n";
-
+            response += "Is customizable?\t" + card.Customizable + "\n";
             var details = card.Details;
             foreach (DetailBase detailBase in details)
             {
@@ -57,12 +57,9 @@ namespace CardsExpanded.Commands
                 }
                 catch (Exception ex)
                 {
-                    response += "Something failed at: " + detailBase.GetType().Name + ".\n" + ex.Message;
-                    return false;
+                    response += "Something failed at: " + detailBase.GetType().Name + ".\n" + ex.Message + "\n";
                 }
             }
-
-
 
             return true;
         }

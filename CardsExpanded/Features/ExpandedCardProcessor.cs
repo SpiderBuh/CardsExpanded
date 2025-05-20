@@ -1,21 +1,25 @@
 ﻿using Interactables.Interobjects.DoorUtils;
 using InventorySystem;
+using InventorySystem.Items.Pickups;
 using LabApi.Features.Interfaces;
 using LabApi.Features.Wrappers;
 using Scp914;
+using System;
 using System.Linq;
+using UnityEngine;
 
 namespace CardsExpanded.Features
 {
     public class ExpandedCardProcessor : IScp914ItemProcessor
     {
-        public bool UsePickupMethodOnly => false;
+        public bool UsePickupMethodOnly => true;
         private InventorySystem.Items.Keycards.KeycardItem source = null;
         private InventorySystem.Items.Keycards.KeycardPickup sourcePickup = null;
         private void clearSourceItems() { source = null; sourcePickup = null; }
 
-        public Scp914Result UpgradeItem(Scp914KnobSetting setting, Item item)
+        public Scp914Result UpgradeItem(Scp914KnobSetting setting, Item item) // Wont be used
         {
+            throw new NotImplementedException();
             if (item is LabApi.Features.Wrappers.KeycardItem keycard)
             {
                 source = keycard.Base;
@@ -34,12 +38,17 @@ namespace CardsExpanded.Features
                 sourcePickup = keycard.Base;
                 source = keycard.GameObject.GetComponent<InventorySystem.Items.Keycards.KeycardItem>();
                 var result = UpgradeCardFromLevels(setting, new(source.GetPermissions(null)));
+                sourcePickup.DestroySelf();
                 clearSourceItems();
                 return result;
             }
             return default;
         }
-
+        private Scp914Result destroyedResult()
+        {
+                sourcePickup.DestroySelf();
+                return new(source);
+        }
         public Scp914Result UpgradeCardFromLevels(Scp914KnobSetting setting, KeycardLevels levels, Player owner = null)
         {
             KeycardLevels ResultingLevels = levels;
@@ -52,7 +61,7 @@ namespace CardsExpanded.Features
                         return new(source, source, sourcePickup);
 
                     if (accessPower == 9)
-                        return new(source);
+                        return destroyedResult();
 
                     if (gambling == 1)
                     {
@@ -60,28 +69,25 @@ namespace CardsExpanded.Features
                     }
                     else
                     {
-                        if ((accessPower == 7 || (accessPower == 6 && levels.HighestLevelValue == 3)) && UnityEngine.Random.Range(0, 1) == 1)
-                            return new(source);
+                        if ((accessPower == 7 || (accessPower == 6 && levels.HighestLevelValue == 3)) && UnityEngine.Random.Range(0, 1) == 1)                       
+                            return destroyedResult();
+                        
                         ResultingLevels = upgradeExpandedCardFine(new(levels.Containment + 1, levels.Armory + 1, levels.Admin + 1));
                     }
                     break;
                 case Scp914KnobSetting.Fine:
-                    if (accessPower == 9 && UnityEngine.Random.Range(0, 1) == 1)
-                        return new(source);
+                    if (accessPower == 9 && gambling == 0)
+                        return destroyedResult();
 
                     ResultingLevels = upgradeExpandedCardFine(levels);
                     break;
                 case Scp914KnobSetting.OneToOne:
-                    if (source.ItemTypeId == ItemType.KeycardMTFCaptain && gambling == 0 && InventoryItemLoader.AvailableItems.TryGetValue(ItemType.KeycardChaosInsurgency, out var chaosCard))
-                    {
-                        return new Scp914Result(source, chaosCard, chaosCard.PickupDropModel);
-                    }
                     ResultingLevels = new(levels.Armory, levels.Admin, levels.Containment);
                     break;
                 case Scp914KnobSetting.Coarse:
                 coarse:
                     if (accessPower == 0)
-                        return new(source);
+                        return destroyedResult();
 
                     int[] Access = [levels.Containment, levels.Armory, levels.Admin];
                     int highest = 0;
@@ -107,15 +113,23 @@ namespace CardsExpanded.Features
                     else
                     {
                         if (accessPower < gambling + 1)
-                            return new(source);
+                            destroyedResult();
 
                         accessPower += accessPower / 2;
                         goto coarse;
                     }
             }
 
-            InventorySystem.Items.Keycards.KeycardItem result = ExpandedCards.GetExpandedKeycard(levels, owner);
-            var resultPickup = result.PickupDropModel;
+            int pIndex = -1;
+            if (ResultingLevels.Containment + ResultingLevels.Armory + ResultingLevels.Admin == 9 && UnityEngine.Random.Range(0f, 1f) > 0.02f)
+            {
+                pIndex = 0; // O5 card more than 98% of the time
+            }
+
+            InventorySystem.Items.Keycards.KeycardItem result = CardsExpandedPlugin.ExpCards.GetExpandedKeycard(ResultingLevels, owner, pIndex);
+            var psi = new PickupSyncInfo(result.ItemTypeId, result.Weight, result.ItemSerial);
+            var resultPos = sourcePickup.Position + Scp914Controller.MoveVector;
+            var resultPickup = InventoryExtensions.ServerCreatePickup(result, psi, resultPos);
             return new Scp914Result(source, result, resultPickup);
         }
 
