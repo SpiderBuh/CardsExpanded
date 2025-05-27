@@ -15,6 +15,11 @@ using System.Reflection;
 
 namespace CardsExpanded.Features
 {
+    public class ExpandedCard : InventorySystem.Items.Keycards.KeycardItem
+    {
+
+    }
+
     public class ExpandedCards
     {
         public readonly List<Dictionary<string, string>> allCards;
