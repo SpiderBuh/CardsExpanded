@@ -15,6 +15,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using Utils.Networking;
+using KeycardItem = LabApi.Features.Wrappers.KeycardItem;
 
 namespace CardsExpanded.Features
 {
@@ -139,6 +140,7 @@ namespace CardsExpanded.Features
             return new(Access[0], Access[1], Access[2]);
         }
 
+        /*
         public override void OnScp914ProcessingPickup(Scp914ProcessingPickupEventArgs args)
         {
             if (MonoBehaviour.FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None).FirstOrDefault(x => x.)) { LabApi.Features.Console.Logger.Error("could not find keycard"); return; }
@@ -160,8 +162,7 @@ namespace CardsExpanded.Features
             var resultPickup = resultCard.ServerDropItem(true);
             
             resultPickup.Position = args.NewPosition;
-            
-        }
+        }*/
         public override void OnScp914ProcessingInventoryItem(Scp914ProcessingInventoryItemEventArgs args)
         {
             if (args.Item is not KeycardItem keycard) return;
